@@ -24,10 +24,17 @@ PtrVec *Lex(U8 *source) {
     return tokens;
 }
 
-U0 PrintTokens(PtrVec *tokens) {
-    for (I64 i = 0; i < tokens->size; i++) {
-        Token *t = PtrVecGet(tokens, i)(Token*);
-        switch [t->kind] { /* no bounds switch */
+U0 PrintTokenSequence(U0 *seq, I64 len, Bool is_tokens) {
+    for (I64 i = 0; i < len; i++) {
+        I32 kind;
+        if (is_tokens) {
+            Token *t = PtrVecGet(seq(PtrVec*), i)(Token*);
+            kind = t->kind;
+        } else {
+            kind = (seq(I32*))[i];
+        }
+
+        switch [kind] {
             case TK_INC_PTR:    "TK_INC_PTR ";    break;
             case TK_DEC_PTR:    "TK_DEC_PTR ";    break;
             case TK_INC:        "TK_INC ";        break;
