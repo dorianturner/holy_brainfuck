@@ -1,7 +1,5 @@
 #include "../src/lexer.hc"
-
-#define False 0
-#define True 1
+#include "../src/util/bool.hc"
 
 // Assert that the entire token sequence matches the expected kinds
 Bool AssertTokens(PtrVec *tokens, I32 *expected, I64 expected_len, U8 *msg) {
