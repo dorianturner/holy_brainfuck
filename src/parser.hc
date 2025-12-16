@@ -204,36 +204,3 @@ Ast* Parse(PtrVec *tokens) {
     Free(starter);
     return root;
 }
-
-
-/* Print flattened AST for testing (same behavior as before; consistent prints) */
-U0 PrintASTFlat(Ast *root) {
-    if (!root) return;
-
-    PtrVec *stack = PtrVecNew();
-    PtrVecPush(stack, root);
-
-    while (stack->size > 0) {
-        Bool ok = True;
-        Ast *node = PtrVecPop(stack, &ok)(Ast*);
-        if (!node) continue;
-
-        switch (node->kind) {
-            case AST_INC_PTR: "AST_INC_PTR "; break;
-            case AST_DEC_PTR: "AST_DEC_PTR "; break;
-            case AST_INC:     "AST_INC ";     break;
-            case AST_DEC:     "AST_DEC ";     break;
-            case AST_PUT:     "AST_PUT ";     break;
-            case AST_GET:     "AST_GET ";     break;
-            case AST_LOOP:
-                if (node->children) {
-                    for (I64 i = node->children->size; i-- > 0; ) {
-                        Ast *child = PtrVecGet(node->children, i)(Ast*);
-                        if (child) PtrVecPush(stack, child);
-                    }
-                }
-                break;
-        }
-    }
-    "\n";
-}
