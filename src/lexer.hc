@@ -5,7 +5,6 @@
 PtrVec *Lex(U8 *source) {
     PtrVec *tokens = PtrVecNew(INITIAL_SIZE);
     for (I64 i = 0; source[i]; i++) {
-        // TODO: Can this be stack allocated?
         Token *t = MAlloc(sizeof(Token));
         switch (source[i]) {
             case '>': t->kind = TK_INC_PTR; break;
