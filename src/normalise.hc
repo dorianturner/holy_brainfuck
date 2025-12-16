@@ -1,4 +1,4 @@
-/* Normalisation pass to optimise the AST */
+/* Normalisation pass to normalise the AST */
 
 #include "../src/util/bool.hc"
 #include "../src/ast.hc"

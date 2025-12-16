@@ -1,5 +1,6 @@
 #include "../src/parser.hc"
 #include "../src/normalise.hc"
+#include "../src/optimise.hc"
 #include "../src/lexer.hc"
 
 /* Flatten AST into a linear list (ignores loop nodes themselves) */
@@ -25,6 +26,9 @@ PtrVec* FlattenAst(Ast *root) {
             case AST_DEC:
             case AST_PUT:
             case AST_GET:
+            case AST_ZERO:
+            case AST_ADD_MOVE:
+            case AST_MUL_MOVE:
                 PtrVecPush(flat, n);
                 break;
 
@@ -142,6 +146,47 @@ U0 TestNormalise() {
     AssertAst(ast, kinds, counts, 4, "TestNormalise");
 }
 
+U0 TestOptimiseZeroLoop() {
+    Ast *ast = Optimise(Normalise(Parse(Lex("[-]"))));
+    if (!ast || !ast->children || ast->children->size != 1) {
+        "TestOptimiseZeroLoop: FAIL (structure)\n";
+        return;
+    }
+    Ast *node = PtrVecGet(ast->children, 0)(Ast*);
+    if (node && node->kind == AST_ZERO)
+        "TestOptimiseZeroLoop: PASS\n";
+    else
+        "TestOptimiseZeroLoop: FAIL (kind)\n";
+}
+
+U0 TestOptimiseAddMove() {
+    Ast *ast = Optimise(Normalise(Parse(Lex("[->+<]"))));
+    if (!ast || !ast->children || ast->children->size != 1) {
+        "TestOptimiseAddMove: FAIL (structure)\n";
+        return;
+    }
+    Ast *node = PtrVecGet(ast->children, 0)(Ast*);
+    if (node && node->kind == AST_ADD_MOVE &&
+        node->target_offset == 1 && node->multiplier == 1)
+        "TestOptimiseAddMove: PASS\n";
+    else
+        "TestOptimiseAddMove: FAIL (kind or fields)\n";
+}
+
+U0 TestOptimiseMulMove() {
+    Ast *ast = Optimise(Normalise(Parse(Lex("[->+++<]"))));
+    if (!ast || !ast->children || ast->children->size != 1) {
+        "TestOptimiseMulMove: FAIL (structure)\n";
+        return;
+    }
+    Ast *node = PtrVecGet(ast->children, 0)(Ast*);
+    if (node && node->kind == AST_MUL_MOVE &&
+        node->target_offset == 1 && node->multiplier == 3)
+        "TestOptimiseMulMove: PASS\n";
+    else
+        "TestOptimiseMulMove: FAIL (kind or fields)\n";
+}
+
 /* Empty program */
 U0 TestEmpty() {
     Ast *ast = Parse(Lex(""));
@@ -159,6 +204,9 @@ U0 Main() {
     TestFlatParse();
     TestLoopParse();
     TestNormalise();
+    TestOptimiseZeroLoop();
+    TestOptimiseAddMove();
+    TestOptimiseMulMove();
     TestEmpty();
     "All tests finished\n";
 }

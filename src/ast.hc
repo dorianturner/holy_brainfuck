@@ -20,6 +20,8 @@ class Ast {
     I64 count;         // repetition count
     I64 pos;           // source position
     PtrVec *children;  // used when kind == AST_LOOP
+    I64 target_offset;  // used by AST_ADD_MOVE/AST_MUL_MOVE
+    I64 multiplier;     // signed scale factor for transfer loops
 };
 
 Ast *AstNew(I32 kind, I64 pos) {
@@ -28,6 +30,8 @@ Ast *AstNew(I32 kind, I64 pos) {
     n->count = 1;
     n->pos = pos;
     n->children = NULL;
+    n->target_offset = 0;
+    n->multiplier = 0;
     return n;
 }
 
