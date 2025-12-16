@@ -11,6 +11,10 @@
 #define AST_GET        5
 #define AST_LOOP       6
 
+#define AST_ZERO        7   // [-] or [+]
+#define AST_ADD_MOVE    8   // [->+<] style
+#define AST_MUL_MOVE    9   // multiplication loop
+
 class Ast {
     I32 kind;          // one of the #define constants
     I64 count;         // repetition count

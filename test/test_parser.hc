@@ -1,50 +1,86 @@
 #include "../src/parser.hc"
+#include "../src/normalise.hc"
 #include "../src/lexer.hc"
 
-/* Assert that a flat AST sequence matches expected kinds */
-Bool AssertASTFlat(Ast *root, I32 *expected, I64 expected_len, U8 *msg) {
-    if (!root) {
-        "%s: FAIL, null AST\n", msg;
-        return False;
-    }
-
-    PtrVec *flat = PtrVecNew(expected_len);
+/* Flatten AST into a linear list (ignores loop nodes themselves) */
+PtrVec* FlattenAst(Ast *root) {
+    PtrVec *flat  = PtrVecNew(16);
     PtrVec *stack = PtrVecNew(16);
-    PtrVecPush(stack, root);
+
+    if (root) {
+        PtrVecPush(stack, root);
+    }
 
     while (stack->size > 0) {
         Bool ok = True;
-        Ast *node = PtrVecPop(stack, &ok)(Ast*);
-        if (!node) continue;
+        Ast *n = PtrVecPop(stack, &ok)(Ast*);
+        if (!n) {
+            continue;
+        }
 
-        switch (node->kind) {
-            case AST_INC_PTR: case AST_DEC_PTR:
-            case AST_INC:     case AST_DEC:
-            case AST_PUT:     case AST_GET:
-                PtrVecPush(flat, node);
+        switch (n->kind) {
+            case AST_INC_PTR:
+            case AST_DEC_PTR:
+            case AST_INC:
+            case AST_DEC:
+            case AST_PUT:
+            case AST_GET:
+                PtrVecPush(flat, n);
                 break;
 
             case AST_LOOP:
-                if (node->children) {
-                    for (I64 i = node->children->size; i-- > 0; ) {
-                        Ast *child = PtrVecGet(node->children, i)(Ast*);
-                        if (child) PtrVecPush(stack, child);
+                if (n->children) {
+                    for (I64 i = n->children->size; i-- > 0; ) {
+                        PtrVecPush(
+                            stack,
+                            PtrVecGet(n->children, i)(Ast*)
+                        );
                     }
                 }
                 break;
         }
     }
 
+    return flat;
+}
+
+Bool AssertAst(
+    Ast *root,
+    I32 *expected_kinds,
+    I64 *expected_counts,
+    I64 expected_len,
+    U8 *msg
+) {
+    if (root == NULL) {
+        "%s: FAIL (null AST)\n", msg;
+        return False;
+    }
+
+    PtrVec *flat = FlattenAst(root);
+
     if (flat->size != expected_len) {
-        "%s: FAIL, AST node count mismatch. Expected %lld, got %lld\n", msg, expected_len, flat->size;
+        "%s: FAIL (expected %lld nodes, got %lld)\n",
+            msg, expected_len, flat->size;
         return False;
     }
 
     for (I64 i = 0; i < expected_len; i++) {
-        Ast *node = PtrVecGet(flat, i)(Ast*);
-        if (!node || node->kind != expected[i]) {
-            "%s: FAIL, AST mismatch at index %lld\n", msg, i;
+        Ast *n = PtrVecGet(flat, i)(Ast*);
+        if (n == NULL) {
+            "%s: FAIL (null node at %lld)\n", msg, i;
             return False;
+        }
+
+        if (n->kind != expected_kinds[i]) {
+            "%s: FAIL (kind mismatch at %lld)\n", msg, i;
+            return False;
+        }
+
+        if (expected_counts) {
+            if (n->count != expected_counts[i]) {
+                "%s: FAIL (count mismatch at %lld)\n", msg, i;
+                return False;
+            }
         }
     }
 
@@ -53,62 +89,76 @@ Bool AssertASTFlat(Ast *root, I32 *expected, I64 expected_len, U8 *msg) {
 }
 
 
-U0 TestAllCommands() {
-    U8 *src = "><+-.,";
-    PtrVec *tokens = Lex(src);
-    Ast *ast = Parse(tokens);
+/* Parser: flat commands */
+U0 TestFlatParse() {
+    Ast *ast = Parse(Lex("><+-.,"));
 
-    if (!ast || !ast->children) {
-        "TestAllCommands: FAIL, null or empty AST\n";
-        PtrVecRelease(tokens);
-        return;
-    }
+    I32 kinds[6] = {
+        AST_INC_PTR,
+        AST_DEC_PTR,
+        AST_INC,
+        AST_DEC,
+        AST_PUT,
+        AST_GET
+    };
 
-    I32 expected[6] = {AST_INC_PTR, AST_DEC_PTR, AST_INC, AST_DEC, AST_PUT, AST_GET};
-    AssertASTFlat(ast, expected, 6, "TestAllCommands");
-
-    PtrVecRelease(tokens);
+    AssertAst(ast, kinds, NULL, 6, "TestFlatParse");
 }
 
-U0 TestLoop() {
-    U8 *src = "+[->+<].";
-    PtrVec *tokens = Lex(src);
-    Ast *ast = Parse(tokens);
+/* Parser: loop nesting and order */
+U0 TestLoopParse() {
+    Ast *ast = Parse(Lex("+[->+<]."));
 
-    if (!ast || !ast->children) {
-        "TestLoop: FAIL, null or empty AST\n";
-        PtrVecRelease(tokens);
-        return;
-    }
+    I32 kinds[6] = {
+        AST_INC,
+        AST_DEC,
+        AST_INC_PTR,
+        AST_INC,
+        AST_DEC_PTR,
+        AST_PUT
+    };
 
-    I32 expected[6] = {AST_INC, AST_DEC, AST_INC_PTR, AST_INC, AST_DEC_PTR, AST_PUT};
-    AssertASTFlat(ast, expected, 6, "TestLoop");
-
-    PtrVecRelease(tokens);
+    AssertAst(ast, kinds, NULL, 6, "TestLoopParse");
 }
 
+/* Normalisation: collapse adjacent ops */
+U0 TestNormalise() {
+    Ast *ast = Normalise(Parse(Lex("+++--->>><<<")));
+
+    I32 kinds[4] = {
+        AST_INC,
+        AST_DEC,
+        AST_INC_PTR,
+        AST_DEC_PTR
+    };
+
+    I64 counts[4] = {
+        3,
+        3,
+        3,
+        3
+    };
+
+    AssertAst(ast, kinds, counts, 4, "TestNormalise");
+}
+
+/* Empty program */
 U0 TestEmpty() {
-    U8 *src = "";
-    PtrVec *tokens = Lex(src);
-    Ast *ast = Parse(tokens);
+    Ast *ast = Parse(Lex(""));
 
     if (!ast || !ast->children || ast->children->size == 0) {
         "TestEmpty: PASS\n";
     } else {
-        "TestEmpty: FAIL, expected empty AST\n";
+        "TestEmpty: FAIL\n";
     }
-
-    PtrVecRelease(tokens);
 }
 
-U0 RunParserTests() {
-    "Running parser tests...\n";
-    TestAllCommands();
-    TestLoop();
-    TestEmpty();
-    "All parser tests finished\n";
-}
 
 U0 Main() {
-    RunParserTests();
+    "Running tests...\n";
+    TestFlatParse();
+    TestLoopParse();
+    TestNormalise();
+    TestEmpty();
+    "All tests finished\n";
 }
