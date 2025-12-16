@@ -1,3 +1,6 @@
+#ifndef AST_HC
+#define AST_HC "AST_HC"
+
 /* Definitions for the recursive AST for brainfuck */
 
 #define AST_INC_PTR    0
@@ -29,3 +32,5 @@ Ast *AstNewLoop(I64 pos, PtrVec *children) {
     n->children = children;
     return n;
 }
+
+#endif

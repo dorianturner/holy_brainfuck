@@ -1,3 +1,6 @@
+#ifndef TOKENS_HC
+#define TOKENS_HC "TOKENS_HC"
+
 /* Token Specification: https://en.wikipedia.org/wiki/Brainfuck */
 
 // Brainfuck token types
@@ -14,3 +17,5 @@ class Token {
     I32 kind;    // one of TK_* constants
     I64 pos;     // position in source code
 };
+
+#endif
