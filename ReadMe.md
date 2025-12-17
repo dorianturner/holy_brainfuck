@@ -35,4 +35,5 @@ With those tools on PATH, the project builds with `make` and the `hbf` binary ca
  - Redo the optimisation to be extensible with function pointers and add more optimisations, e.g. initial loop comment
  - See if I can optimise the IR further
  - Simplify the generate stage if I can
+ - See if I can stack allocate some things instead of heap (HCC was acting up when I tried to before)
  - Maybe make this concurrent !?!?
