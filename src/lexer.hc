@@ -1,9 +1,7 @@
 #include "../src/tokens.hc"
 
-#define INITIAL_SIZE 32 // Arbitrary for the resizing array list of tokens
-
 PtrVec *Lex(U8 *source) {
-    PtrVec *tokens = PtrVecNew(INITIAL_SIZE);
+    PtrVec *tokens = PtrVecNew();
     for (I64 i = 0; source[i]; i++) {
         Token *t = MAlloc(sizeof(Token));
         switch (source[i]) {
