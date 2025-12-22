@@ -4,7 +4,7 @@ This project is a full Brainfuck compiler, written in gods chosen language. I ma
 
 ## Pipeline
 1. **Lexing** - `Lex()` walks the Brainfuck source, ignoring comments/whitespace and producing a flat `PtrVec` of `Token`s.
-2. **Parsing** - `Parse()` consumes the tokens and builds a nested AST of `Ast` nodes, managing `[`/`]` structure.
+2. **Parsing** - `Parse()` consumes the tokens and builds a nested AST of `Ast` nodes, managing `[`/`]` structure. Done via parser combinators that try and walk progress through input tokens and returning if it was successful and the position it progressed to in the tokens.
 3. **Normalisation** - `Normalise()` collapses adjacent identical operations (e.g. `+++` -> one `AST_INC` with `count=3`) and recursively normalises loop bodies.
 4. **Optimisation** - `Optimise()` recognises some Brainfuck idioms: zeroing loops, pointer-transfer loops (add/mul moves), and rewrites them into specialised AST node kinds with metadata (`target_offset`, `multiplier`). I need to redo this with function pointers as the current approach is kind of not extensible at all.
 5. **IR Flattening** - `AstToIr()` traverses the optimised AST and returns a linear IR (`Ir` class vector) so later stages never have to reason about nesting. I need to add an optimisation step to this IR, maybe it could be even better.
